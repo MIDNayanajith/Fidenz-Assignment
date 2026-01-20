@@ -1,23 +1,30 @@
 import { useEffect, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { withAuthenticationRequired } from "@auth0/auth0-react";
-import { LogoutButton } from "../components/LogoutButton"; // we'll create this
+import { LogoutButton } from "../components/LogoutButton";
+import WeatherChart from "../components/WeatherChart";
+import FilterSort from "../components/FilterSort";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const Dashboard = () => {
-  const { getAccessTokenSilently, logout } = useAuth0();
-  const [weatherData, setWeatherData] = useState([]);
+  const { getAccessTokenSilently } = useAuth0();
+  const [originalData, setOriginalData] = useState([]);
+  const [displayData, setDisplayData] = useState([]);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = await getAccessTokenSilently();
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/getWeather`, {
+        const res = await fetch(`${API_BASE_URL}/getWeather`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         const data = await res.json();
-        setWeatherData(data);
+        setOriginalData(data);
+        setDisplayData(data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -26,19 +33,33 @@ const Dashboard = () => {
     };
     fetchData();
   }, [getAccessTokenSilently]);
+
+  const handleUpdateDisplay = (updatedData) => {
+    setDisplayData(updatedData);
+  };
+
   if (loading)
     return <div className="text-center mt-20">Loading weather data...</div>;
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <h1 className="text-3xl font-bold">
             Weather Comfort Index Dashboard
           </h1>
+
           <LogoutButton />
         </div>
+        <div className="w-full md:w-auto mb-8">
+          <FilterSort data={originalData} onUpdate={handleUpdateDisplay} />
+        </div>
+
+        {/* Line Chart Component */}
+        <WeatherChart data={displayData} />
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {weatherData.map((city) => (
+          {displayData.map((city) => (
             <div
               key={city.city}
               className="bg-white rounded-xl shadow p-6 hover:shadow-lg transition"
